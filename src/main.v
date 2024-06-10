@@ -34,8 +34,6 @@ fn text_input(mut session P2PMsgSession) ! {
 		print('> ')
 		data := os.get_line()
 
-		data_args := data.split(' ')
-
 		// make all messages starting with '//' be remaped to a function in shell_fns
 		mut shell_fns := map[string]ShellFn{}
 		shell_fns['add'] = add
@@ -46,7 +44,10 @@ fn text_input(mut session P2PMsgSession) ! {
 
 			shell_args := shell_str.split(' ')
 
-			shell_action := shell_fns[shell_args[0]]
+			shell_action := shell_fns[shell_args[0]] or {
+				eprintln('invallid command')
+				continue
+			}
 			shell_action(mut session, shell_args) or {
 				eprintln('${err}')
 				exit(1)
