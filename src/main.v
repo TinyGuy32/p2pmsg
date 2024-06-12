@@ -38,21 +38,11 @@ fn text_input(mut session P2PMsgSession) ! {
 		mut shell_fns := map[string]ShellFn{}
 		shell_fns['add'] = add
 
-		// put in a function called 'msg_shell'
-		if data[0..2] == '//' {
-			mut shell_str := data[2..data.len].clone()
-
-			shell_args := shell_str.split(' ')
-
-			shell_action := shell_fns[shell_args[0]] or {
-				eprintln('invallid command')
+		if data.len >= 2 {
+			res := msg_shell(mut session, shell_fns, data)!
+			if res == 1 {
 				continue
 			}
-			shell_action(mut session, shell_args) or {
-				eprintln('${err}')
-				exit(1)
-			}
-			continue
 		}
 
 		for rpeer in session.rpeers {
@@ -65,6 +55,7 @@ fn text_input(mut session P2PMsgSession) ! {
 }
 
 fn recv(mut session P2PMsgSession) ! {
+	mut alias_map := map[string]string{}
 	mut buffer := []u8{len: 1024}
 	for {
 		size, rpeer := session.lpeer.read(mut buffer) or { continue }
@@ -72,9 +63,21 @@ fn recv(mut session P2PMsgSession) ! {
 
 		if text_data == '::ignore' {
 			continue
+		} else if text_data[0..7] or { '' } == '::alias' {
+			rpeer_ip_str := rpeer.str()
+			new_alias := text_data[8..text_data.len].clone()
+			alias_map[rpeer_ip_str] = new_alias
+			println('\r${rpeer_ip_str} has set their alias to ${new_alias}')
+			print('> ')
+			continue
 		}
 
-		println('\r${rpeer}|${size} // ${text_data}')
+		mut rpeer_alias := rpeer.str()
+		if rpeer_alias in alias_map {
+			rpeer_alias = alias_map[rpeer_alias]
+		}
+
+		println('\r${rpeer_alias}|${size} // ${text_data}')
 		print('> ')
 	}
 }
