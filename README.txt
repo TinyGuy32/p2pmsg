@@ -1,3 +1,6 @@
+Before compiling the app you will need to install the libsodium wrapper for V, to do this type
+'v install libsodium'
+
 To start the app compile it by changing into the p2pmsg directory and typing
 'v .' in your terminal
 and then type

@@ -6,8 +6,9 @@ import time
 
 struct P2PMsgSession {
 mut:
-	lpeer  net.UdpConn
-	rpeers []net.Addr
+	lpeer     net.UdpConn
+	rpeers    []net.Addr
+	alias_map map[string]string
 }
 
 fn main() {
@@ -55,26 +56,31 @@ fn text_input(mut session P2PMsgSession) ! {
 }
 
 fn recv(mut session P2PMsgSession) ! {
-	mut alias_map := map[string]string{}
 	mut buffer := []u8{len: 1024}
+
+	mut rmsg_shell_m := map[string]RmsgShellFn{}
+	rmsg_shell_m['alias-me'] = alias
+	rmsg_shell_m['invalid'] = r_invalid
+	rmsg_shell_m['error'] = r_shell_error
+
 	for {
 		size, rpeer := session.lpeer.read(mut buffer) or { continue }
 		text_data := buffer[0..size].clone().bytestr()
 
 		if text_data == '::ignore' {
 			continue
-		} else if text_data[0..7] or { '' } == '::alias' {
-			rpeer_ip_str := rpeer.str()
-			new_alias := text_data[8..text_data.len].clone()
-			alias_map[rpeer_ip_str] = new_alias
-			println('\r${rpeer_ip_str} has set their alias to ${new_alias}')
-			print('> ')
-			continue
+		}
+
+		if text_data.len > 2 {
+			res := rmsg_shell(mut session, rmsg_shell_m, rpeer, text_data)!
+			if res == 1 {
+				continue
+			}
 		}
 
 		mut rpeer_alias := rpeer.str()
-		if rpeer_alias in alias_map {
-			rpeer_alias = alias_map[rpeer_alias]
+		if rpeer_alias in session.alias_map {
+			rpeer_alias = session.alias_map[rpeer_alias]
 		}
 
 		println('\r${rpeer_alias}|${size} // ${text_data}')
